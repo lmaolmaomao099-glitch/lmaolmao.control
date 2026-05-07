@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BLE Robot Pro</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #2c3e50; color: white; }
+        .btn { width: 90px; height: 90px; margin: 10px; font-size: 18px; font-weight: bold; border-radius: 50%; border: none; background-color: #e67e22; color: white; touch-action: manipulation; }
+        .btn:active { background-color: #d35400; transform: scale(0.9); }
+        .status { margin-bottom: 20px; font-weight: bold; color: #ecf0f1; }
+        #connectBtn { padding: 10px 20px; background: #27ae60; border: none; color: white; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Status: Disconnected</div>
+    <button id="connectBtn" onclick="connectBLE()">Connect to Robot</button>
+
+    <div id="controls" style="display:none; text-align: center; margin-top: 20px;">
+        <button class="btn" onmousedown="start('w')" onmouseup="stop()" ontouchstart="start('w')" ontouchend="stop()">UP</button><br>
+        <button class="btn" onmousedown="start('a')" onmouseup="stop()" ontouchstart="start('a')" ontouchend="stop()">LEFT</button>
+        <button class="btn" onmousedown="start('s')" onmouseup="stop()" ontouchstart="start('s')" ontouchend="stop()">DOWN</button>
+        <button class="btn" onmousedown="start('d')" onmouseup="stop()" ontouchstart="start('d')" ontouchend="stop()">RIGHT</button>
+    </div>
+
+    <script>
+        let robotCharacteristic;
+        let interval;
+
+        // Must match the UUIDs in your ESP32 code
+        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHAR_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+
+        async function connectBLE() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32-Robot' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                robotCharacteristic = await service.getCharacteristic(CHAR_UUID);
+                
+                document.getElementById('status').innerText = "Status: Connected!";
+                document.getElementById('connectBtn').style.display = "none";
+                document.getElementById('controls').style.display = "block";
+            } catch (error) {
+                console.log("Error: " + error);
+                alert("Connection failed. Ensure Bluetooth is on and you are using HTTPS.");
+            }
+        }
+
+        function sendCommand(cmd) {
+            if (robotCharacteristic) {
+                const encoder = new TextEncoder();
+                robotCharacteristic.writeValue(encoder.encode(cmd));
+            }
+        }
+
+        function start(c) {
+            if (interval) return; 
+            sendCommand(c);
+            interval = setInterval(() => { sendCommand(c); }, 100); [cite: 7]
+        }
+
+        function stop() {
+            clearInterval(interval); [cite: 9]
+            interval = null;
+            sendCommand('S'); [cite: 9]
+        }
+    </script>
+</body>
+</html>
